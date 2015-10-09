@@ -1176,17 +1176,19 @@
                 var target = Math.abs(target);
                 widget._removeStates();
                 var visible = 0;
-                for (var i=0; i<this.metrics.length; i++) {
+                for (var i = 0; i < this.metrics.length; i++) {
                     var pos = this.metrics[i].pos;
                     var elm = widget._children.eq(i);
                     var elmSize = this.metrics[i].size;
-                    if(pos>=target && (pos+elmSize-target)<=widget._elmSize()){
-                        widget._setState(elm,'visible');
+                    var bounds = parseFloat(widget._children.eq(i).css('margin-right')) * 2;
+
+                    if (pos >= target && (pos + elmSize - bounds - target) <= widget._elmSize()) {
+                        widget._setState(elm, 'visible');
                         visible++;
-                    } else if ((pos+elmSize>target && (pos+elmSize-target)<=widget._elmSize()) || (pos>=target&&(pos-target)<widget._elmSize())) {
-                        widget._setState(elm,'partial');
+                    } else if ((pos + elmSize - bounds > target && (pos + elmSize - bounds - target) <= widget._elmSize()) || (pos >= target && (pos - target) < widget._elmSize())) {
+                        widget._setState(elm, 'partial');
                     } else {
-                        widget._setState(elm,'invisible');
+                        widget._setState(elm, 'invisible');
                     }
                 }
                 widget._visible = visible;
