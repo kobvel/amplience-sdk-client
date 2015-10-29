@@ -1,5 +1,4 @@
 !.gitkeep
-*.orig
 /node_modules
 /bower_components
 /build

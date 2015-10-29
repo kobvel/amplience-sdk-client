@@ -75,11 +75,6 @@
                     if (e.originalEvent.touches.length!=this.options.gesture.fingers)
                         return true;
                 }
-
-                if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.type === 'range') {
-                    return true;
-                }
-
                 this.changed = false;
                 this.moved = false;
                 this.startTouchEvent = e;
@@ -105,9 +100,6 @@
                 if(e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0] ) {
                     if (e.originalEvent.touches.length!=this.options.gesture.fingers)
                         return true;
-                }
-                if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.type === 'range') {
-                    return true;
                 }
                 this.moved = true;
                 this.lastEvent = e;
@@ -244,9 +236,7 @@
                 var method = this._asyncMethods.splice(0,1)[0];
                 if(method.func && method.args) {
                     setTimeout(function(){
-                        if (method && method.func) {
-                            method.func.apply(self,method.args);
-                        }
+                        method.func.apply(self,method.args);
                     },count);
                     count++
                 }

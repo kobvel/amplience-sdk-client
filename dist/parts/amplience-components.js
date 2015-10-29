@@ -75,11 +75,6 @@
                     if (e.originalEvent.touches.length!=this.options.gesture.fingers)
                         return true;
                 }
-
-                if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.type === 'range') {
-                    return true;
-                }
-
                 this.changed = false;
                 this.moved = false;
                 this.startTouchEvent = e;
@@ -105,9 +100,6 @@
                 if(e.originalEvent && e.originalEvent.touches && e.originalEvent.touches[0] ) {
                     if (e.originalEvent.touches.length!=this.options.gesture.fingers)
                         return true;
-                }
-                if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.type === 'range') {
-                    return true;
                 }
                 this.moved = true;
                 this.lastEvent = e;
@@ -244,9 +236,7 @@
                 var method = this._asyncMethods.splice(0,1)[0];
                 if(method.func && method.args) {
                     setTimeout(function(){
-                        if (method && method.func) {
-                            method.func.apply(self,method.args);
-                        }
+                        method.func.apply(self,method.args);
                     },count);
                     count++
                 }
@@ -1776,14 +1766,13 @@
             this.imgs = [];
             var i = 0;
             do{
-				var img = $('<img class="amp-zoom-img">');
-				img.css(reset); 
-				this.wrapper.append(img); 
-                this.imgs.push(img);
+                this.imgs.push($('<img class="amp-zoom-img">'));
+                this.imgs[i].css(reset);
+
                 i++;
             }while(i < (this._cycle && this._cycle.len));
 
-       
+            this.wrapper.append(this.imgs);
             if(this.options.responsive){
                 this.element.css({ height:'auto', width:'100%', maxWidth:'100%' });
             }
@@ -1825,7 +1814,7 @@
             }
 
             this.target = this.imgs[0];
-            this._setZoomCursor(this.parent);
+            this._setCursor(this.options.cursor.inactive, this.parent);
             this.parent.addClass(this.options.states.inactive);
 
             if(this.options.preload.image == 'created' || this.element[0].src)
@@ -1836,10 +1825,6 @@
             }
         },
         _onImageLoad: function(){
-            if (this._imageLoaded) {
-                return;
-            }
-
             this._track( 'loaded', true );
             this._imageLoaded = true;
             this._imageLoading = false;
@@ -2179,7 +2164,7 @@
                  };
                  this.parent.on(this.moveEvent, $.proxy(self._parentMove,self));
                  this._mouseMove(self._getEvent(e), pw, ph, tw, th, po, bw, bh, mw, mh, lens);
-                 this._setZoomCursor(self.lens ? self.lens : self.parent);
+                 this._setCursor(self.options.cursor.active, self.lens ? self.lens : self.parent);
 
                  if(this.options.fade) {
                     this.animating = true;
@@ -2685,28 +2670,6 @@
                 el.css('cursor', '-webkit-' + cursorStyle);
             }
         },
-        _setZoomCursor: function(el) {
-            var zoomLevels = this.options.zoom;
-
-            if (zoomLevels.length) {
-                // we have multiple zoom levels, set the zoom cursor according to where we are in the cycle
-                var zoomIndex = zoomLevels.indexOf(this.zoomBy);
-
-                if (zoomIndex === zoomLevels.length - 1) {
-                    this._setCursor(this.options.cursor.active, el);
-                } else {
-                    this._setCursor(this.options.cursor.inactive, el);
-                }
-
-            } else {
-                // we have single level zoom, set the zoom cursor according to whether we are in zoom or not
-                if (this.zoomBy > 1) {
-                    this._setCursor(this.options.cursor.active, el);
-                } else {
-                    this._setCursor(this.options.cursor.inactive, el);
-                }
-            }
-        },
         _getDistance:function(t){
             var x = Math.abs(t[0].pageX-t[1].pageX),
                 y = Math.abs(t[0].pageY-t[1].pageY);
@@ -2905,14 +2868,6 @@
             this.parentSize = {"x":this.$parent.width(),"y":this.$parent.height()};
         },
 
-        state: function() {
-            return {
-                scale: this.scale,
-                scaleMax:this.options.scaleMax,
-                scaleStep:this.options.scaleStep
-            };
-        },
-
         zoomInFull:function(e) {
             this.setScale(this.options.scaleMax);
             this._track('zoomedInFull',{domEvent:e,scale:this.options.scaleMax,scaleMax:this.options.scaleMax,scaleStep:this.options.scaleStep});
@@ -3003,13 +2958,8 @@
                 return;
             }
             if(this.scale == 1) {
-                if (this.options.events.move) {
-                    $(document).off(this.options.events.move, this._setPos);
-                }
-
-                if (this.options.events.zoomOut) {
-                    $(document).off(this.options.events.zoomOut,this.zoomOut);
-                }
+                $(document).off(this.options.events.move, this._setPos);
+                $(document).off(this.options.events.zoomOut,this.zoomOut);
             }
             this.zoomArea.setScale(this.scale);
             this._track('zoomedOut',{domEvent:e,scale:this.scale,scaleMax:this.options.scaleMax,scaleStep:this.options.scaleStep});
@@ -3019,14 +2969,8 @@
             if (!this.zoomArea) {
                 return;
             }
-            if (this.options.events.move) {
-                $(document).off(this.options.events.move, this._setPos);
-            }
-
-            if (this.options.events.zoomOut) {
-                $(document).off(this.options.events.zoomOut,this.zoomOut);
-            }
-
+            $(document).off(this.options.events.move, this._setPos);
+            $(document).off(this.options.events.zoomOut,this.zoomOut);
             this.scale = 1;
             this.zoomArea.setScale(1);
             this._track('zoomedOutFull',{domEvent:e,scale:this.scale,scaleMax:this.options.scaleMax,scaleStep:this.options.scaleStep});
@@ -3295,12 +3239,13 @@
         if((scale < this.scale) && scale == 1) {
             this.newSize = {'x':this.$source.width(), 'y':this.$source.height()};
         } else {
-            this.newSize = {'x':this.$source.width()*scale, 'y':this.$source.height()*scale};
+            this.newSize = {'x':this.originalSize.x*scale, 'y':this.originalSize.y*scale};
         }
         if (this.scale==1) {
             this.$zoomed.attr('src',this.$source.attr('src'));
             if(scale > this.scale) {
                 this.$zoomed.width(this.$source.width());
+                this.$zoomed.height(this.$source.height());
                 this.$zoomed.height(this.$source.height());
             }
             this.setPosition(0.5,0.5);
@@ -3312,7 +3257,7 @@
             this.animate(this.newSize,this.getPixPos());
         }
         this.scale = scale;
-        this.invalidateImageURL({'x':this.originalSize.x*scale, 'y':this.originalSize.y*scale});
+        this.invalidateImageURL();
     };
 
     zoomArea.prototype.show = function(){
@@ -3327,16 +3272,9 @@
         $(window).off('resize', this.invalidatePosition);
     };
 
-    zoomArea.prototype.invalidateImageURL = function(size) {
-        var templateQueryParam = '';
-
-        if (this.transforms && this.transforms.length) {
-            templateQueryParam = this.transforms + '&';
-        }
-
-        var src = this.initialSrc.split('?')[0] + '?' + templateQueryParam + 'w=' + size.x + '&h=' +size.y;
-
-        if(size.x == 0 || size.y ==0) {
+    zoomArea.prototype.invalidateImageURL = function() {
+        var src = this.initialSrc.split('?')[0]+'?w='+this.newSize.x+'&h='+this.newSize.y+'&'+this.transforms;
+        if(this.newSize.x == 0 || this.newSize.y ==0) {
             src='';
         }
         this.$preloader.attr('src',src);
@@ -3360,8 +3298,7 @@
             pauseOnHide: true,
             controls:true,
             nativeControlsForTouch:true,
-            plugins:{},
-            enableSoftStates: true
+            plugins:{}
         },
         _states: {
             stopped:0,
@@ -3372,7 +3309,6 @@
             error:5,
             idle:6
         },
-        _currentState: 0,
         _ready: false,
         _loopCount: 0,
         _savedHTML:'',
@@ -3432,7 +3368,7 @@
                     self.state(self._states.playing);
 
                 this.on("play", function (e) {
-                    if (!self.softPlay || !self.options.enableSoftStates) {
+                    if (!self.softPlay) {
                         self.state(self._states.playing);
                         self._track("play", {event:e,player:this,time: this.currentTime(),duration: self.duration});
                     } else {
@@ -3458,7 +3394,7 @@
 
                 this.on("seeking", function (e) {
                     if (!self.softSeek) {
-                        if (self.state() !== self._states.paused && e.target.currentTime !== 0 && self.options.enableSoftStates)
+                        if (self.state() != self._states.paused && e.target.currentTime != 0)
                             self.softPlay = true;
                         self._track("seeked", {event:e,player:this,time: this.currentTime(),duration: self.duration});
                     } else {
@@ -3492,7 +3428,6 @@
                         self._player.play();
                         self._track("looped", { count: ++self._loopCount });
                     }else{
-                        self.state(self._states.stopped);
                         self._track("ended", null);
                     }
                 });
@@ -3744,9 +3679,6 @@
             }else{
                 this.prev();
             }
-
-            this._track("scroll", { 'domEvent': e, delta: delta });
-
             e.preventDefault();
             return false;
         },
@@ -3801,36 +3733,35 @@
             }
 
 
-            var onLoad = function (e) {
+            var onLoad = function(e){
                 self.loadedCount++;
-                if (self.loadedCount >= self.toLoadCount && !self._loaded) {
-                    self._unsetLoadEvents(self.imgs);
+                var percent = ((self.loadedCount/self.toLoadCount)*100);
+                if(self.pre) {
+                    self.pre.css('width', 100 - percent + '%');
+                    self.pre.css('left', percent + '%');
+                }
+                if(self.progressIndicator && self.progressIndicator.visible){
+                    self.progressIndicator.progress.css('width', percent + '%');
+                }
+
+                 if(self.loadedCount >= self.toLoadCount) {
                     self._loaded = true;
-                    if (self.pre) {
+                    if(self.pre) {
                         self.pre.remove();
                     }
                     if (self.options.play.onLoad) {
                         self.playRepeat(self.options.play.repeat);
                     }
                     self._loading = false;
-                    if (self.progressIndicator) {
+                    if(self.progressIndicator) {
                         self.progressIndicator.visible = false;
                         self.progressIndicator.remove();
                     }
 
                     self._track('preloaded');
-                } else {
-                    var percent = ((self.loadedCount / self.toLoadCount) * 100);
-                    if (self.pre) {
-                        self.pre.css('width', 100 - percent + '%');
-                        self.pre.css('left', percent + '%');
-                    }
-                    if (self.progressIndicator && self.progressIndicator.visible) {
-                        self.progressIndicator.progress.css('width', percent + '%');
-                    }
                 }
 
-            };
+            }
 
             if(index){
                 this.first = true;
@@ -3840,21 +3771,6 @@
                 this._callImageMethod(this.imgs, onLoad)
             }
 
-        },
-        _unsetLoadEvents: function(imgs) {
-            if(!imgs){
-                return;
-            }
-            for(var m = 0, len = imgs.length; m < len; m++) {
-                var child = $(imgs[m]),
-                    components = child.data();
-
-                if(components['amp-ampZoom']){
-                    child.ampZoom({'loaded':null});
-                }else{
-                    child.ampImage({'loaded':null});
-                }
-            }
         },
         _callImageMethod: function(imgs, onLoad) {
             for(var m = 0, len = imgs.length; m < len; m++) {
@@ -3878,7 +3794,8 @@
                 this.play();
                 return;
             }
-            var self = this;
+            var self = this,
+                totalPlayTime = num * this.options.delay * this._count;
 
             for(var i=0; i<num; i++) {
                 for (var x=0; x<this.count;x++) {
